@@ -51,7 +51,7 @@ import csv
 def memoize(f):
     """
     Creates an unbound cache of function calls and results. Note that arguments
-    of different types are not cached separately (so f(3.0) and f(3) are not
+    of different types are not cached separately (so f(3.0) and f(3) are not 
     treated as distinct calls)
 
     Arguments to the cached function must be hashable.
@@ -63,15 +63,12 @@ def memoize(f):
     cache = {}
     sentinel = object()         # unique object for cache misses
     make_key = _make_key        # efficient key building from function args
-    cache_get = cache.get
-    cache_len = cache.__len__
+    cache_get = cache.get       
+    cache_len = cache.__len__   
 
     @wraps(f)
     def wrapper(*args, **kwargs):
-
-        # Don't consider 3.0 and 3 different
-        key = make_key(args, kwargs, typed=False)
-
+        key = make_key(args, kwargs, typed=False)    # Don't consider 3.0 and 3 different
         result = cache_get(key, sentinel)
         if result is not sentinel:
             return result
@@ -100,8 +97,6 @@ class Cache(object):
                  version=None,
                  **kwargs):
         self.cache = cache
-        if version is None and hasattr(self, 'MANIFEST_VERSION'):
-            version = self.MANIFEST_VERSION
         self.load_manifest(manifest, version)
 
     def get_cache_path(self, file_name, manifest_key, *args):
@@ -161,24 +156,14 @@ class Cache(object):
                 elif e.outdated is None:
                     intro = "version did not match the expected version"
 
-                ref_url = "https://github.com/alleninstitute/allensdk/wiki"
                 raise ManifestVersionError(("Your manifest file (%s) %s" +
-                                            " (its version is '%s', but" +
-                                            " version '%s' is expected). " +
-                                            " Please remove this file" +
-                                            " and it will be regenerated for" +
-                                            " you the next time you" +
-                                            " instantiate this class." +
-                                            " WARNING: There may be new data" +
-                                            " files available that replace" +
-                                            " the ones you already have" +
-                                            " downloaded. Read the notes" +
-                                            " for this release for more" +
-                                            " details on what has changed" +
-                                            " (%s).") %
-                                           (file_name, intro,
-                                            e.found_version, e.version,
-                                            ref_url),
+                                            " (its version is '%s', but version '%s' is expected).  Please remove this file" +
+                                            " and it will be regenerated for you the next" +
+                                            " time you instantiate this class." +
+                                            " WARNING: There may be new data files available that replace the ones you already have downloaded." +
+                                            " Read the notes for this release for more details on what has changed" +
+                                            " (https://github.com/alleninstitute/allensdk/wiki).") % 
+                                           (file_name, intro, e.found_version, e.version),
                                            e.version, e.found_version)
 
             self.manifest_path = file_name
@@ -202,15 +187,14 @@ class Cache(object):
 
         manifest_builder.write_json_file(file_name)
 
+
     def add_manifest_paths(self, manifest_builder):
         '''Add cache-class specific paths to the manifest. In derived classes,
         should call super.
         '''
         manifest_builder.add_path('BASEDIR', '.')
-        if hasattr(self, 'MANIFEST_CONFIG'):
-            for key, config in self.MANIFEST_CONFIG.items():
-                manifest_builder.add_path(key, **config)
         return manifest_builder
+
 
     def manifest_dataframe(self):
         '''Convenience method to view manifest as a pandas dataframe.
@@ -335,8 +319,7 @@ class Cache(object):
             'lazy' queries the server if no file exists,
             None generates the data and bypasses all caching behavior
         pre : function
-            df|json->df|json, takes one data argument and returns
-            filtered version, None for pass-through
+            df|json->df|json, takes one data argument and returns filtered version, None for pass-through
         post : function
             df|json->?, takes one data argument and returns Object
         reader : function, optional
@@ -364,8 +347,7 @@ class Cache(object):
             else:
                 strategy = 'pass_through'
 
-        if strategy not in ['lazy', 'pass_through',
-                            'file', 'create']:
+        if not strategy in ['lazy', 'pass_through', 'file', 'create']:
             raise ValueError("Unknown query strategy: {}.".format(strategy))
 
         if 'lazy' == strategy:
@@ -375,7 +357,7 @@ class Cache(object):
                 strategy = 'create'
 
         if strategy == 'pass_through':
-            data = fn(*args, **kwargs)
+                data = fn(*args, **kwargs)
         elif strategy in ['create']:
             Manifest.safe_make_parent_dirs(path)
 
@@ -397,7 +379,7 @@ class Cache(object):
         try:
             data
             return data
-        except Exception:
+        except:
             pass
 
         return
@@ -412,7 +394,7 @@ class Cache(object):
         with open(pth, 'w') as output:
             for row in gen:
                 if first_row:
-                    field_names = [str(k) for k in row.keys()]
+                    field_names = [ str(k) for k in row.keys() ]
                     csv_writer = csv.DictWriter(output,
                                                 fieldnames=field_names,
                                                 delimiter=',',
@@ -425,20 +407,16 @@ class Cache(object):
 
     @staticmethod
     def cache_csv_json():
-
-        def reader(f):
-            return pd.read_csv(f, parse_dates=True).to_dict('records')
-
         return {
              'writer': Cache.csv_writer,
-             'reader': reader
+             'reader': lambda f: pd.read_csv(f, parse_dates=True).to_dict('records')
         }
 
     @staticmethod
     def cache_csv_dataframe():
         return {
              'writer': Cache.csv_writer,
-             'reader': lambda f: pd.read_csv(f, parse_dates=True)
+             'reader' : lambda f: pd.read_csv(f, parse_dates=True)
         }
 
     @staticmethod
@@ -463,7 +441,7 @@ class Cache(object):
     def cache_json():
         return {
             'writer': ju.write,
-            'reader': ju.read
+            'reader' : ju.read
         }
 
     @staticmethod
@@ -478,25 +456,22 @@ class Cache(object):
                    secondary_file_name_position=None,
                    path_keyword=None):
         '''helper method to find path argument in legacy methods written
-        prior to the @cacheable decorator.  Do not use for new
-        @cacheable methods.
+        prior to the @cacheable decorator.  Do not use for new @cacheable methods.
 
         Parameters
         ----------
         file_name_position : integer
-            zero indexed position in the decorated method args
-            where file path may be found.
+            zero indexed position in the decorated method args where file path may be found.
         secondary_file_name_position : integer
-            zero indexed position in the decorated method args where
-            the file path may be found.
+            zero indexed position in the decorated method args where tha file path may be found.
         path_keyword : string
             kwarg that may have the file path.
 
         Notes
         -----
-        This method is only intended to provide backward-compatibility
-        for some methods that otherwise do not follow the path conventions
-        of the @cacheable decorator.
+        This method is only intended to provide backward-compatibility for some
+        methods that otherwise do not follow the path conventions of the @cacheable
+        decorator.
         '''
         def pf(*args, **kwargs):
             file_name = None
@@ -509,7 +484,7 @@ class Cache(object):
 
                 if (file_name is None and
                     secondary_file_name_position and
-                    secondary_file_name_position < len(args)):  # noqa E129
+                    secondary_file_name_position < len(args)):
                     file_name = args[secondary_file_name_position]
 
             return file_name
@@ -535,8 +510,7 @@ class Cache(object):
         save_as_json : boolean, optional
             True (default) will save data as json, False as csv
         return_dataframe : boolean, optional
-            True will cast the return value to a pandas dataframe,
-            False (default) will not
+            True will cast the return value to a pandas dataframe, False (default) will not
         index : string, optional
             column to use as the pandas index
         rename : list of string tuples, optional
@@ -580,8 +554,7 @@ class Cache(object):
             data = pd.read_csv(path, parse_dates=True)
         else:
             raise ValueError(
-                'save_as_json=False cannot be used with '
-                'return_dataframe=False')
+                'save_as_json=False cannot be used with return_dataframe=False')
 
         return data
 
@@ -606,8 +579,7 @@ def cacheable(strategy=None,
         'lazy' creates the data and saves to file if no file exists,
         None queries the server and bypasses all caching behavior
     pre : function
-        df|json->df|json, takes one data argument and returns
-        filtered version, None for pass-through
+        df|json->df|json, takes one data argument and returns filtered version, None for pass-through
     post : function
         df|json->?, takes one data argument and returns Object
     reader : function, optional
@@ -627,7 +599,7 @@ def cacheable(strategy=None,
     Column renaming happens after the file is reloaded for json
     '''
     def decor(func):
-        decor.strategy = strategy
+        decor.strategy=strategy
         decor.pre = pre
         decor.writer = writer
         decor.reader = reader
@@ -637,23 +609,23 @@ def cacheable(strategy=None,
         @functools.wraps(func)
         def w(*args,
               **kwargs):
-            if decor.pathfinder and 'pathfinder' not in kwargs:
+            if decor.pathfinder and not 'pathfinder' in kwargs:
                 pathfinder = decor.pathfinder
             else:
                 pathfinder = kwargs.pop('pathfinder', None)
 
-            if pathfinder and 'path' not in kwargs:
+            if pathfinder and not 'path' in kwargs:
                 found_path = pathfinder(*args, **kwargs)
 
                 if found_path:
                     kwargs['path'] = found_path
-            if decor.strategy and 'strategy' not in kwargs:
+            if decor.strategy and not 'strategy' in kwargs:
                 kwargs['strategy'] = decor.strategy
-            if decor.pre and 'pre' not in kwargs:
+            if decor.pre and not 'pre' in kwargs:
                 kwargs['pre'] = decor.pre
-            if decor.writer and 'writer' not in kwargs:
+            if decor.writer and not 'writer' in kwargs:
                 kwargs['writer'] = decor.writer
-            if decor.reader and 'reader' not in kwargs:
+            if decor.reader and not 'reader' in kwargs:
                 kwargs['reader'] = decor.reader
             if decor.post and not 'post in kwargs':
                 kwargs['post'] = decor.post
